@@ -23,6 +23,7 @@ from tau2.user.base import BaseUser, is_valid_user_history_message
 from tau2.user.user_simulator import DummyUser, UserSimulator, UserState
 from tau2.utils.llm_utils import get_cost
 from tau2.utils.utils import format_time, get_now
+from tau2.metrics.agent_metrics import calculate_bias_score, calculate_tone_score
 
 
 class Role(str, Enum):
@@ -266,6 +267,17 @@ class Orchestrator:
             agent_cost, user_cost = None, None
         else:
             agent_cost, user_cost = res
+        
+        # Calculate bias and tone scores
+        bias_score = None
+        tone_score = None
+        if messages:
+            try:
+                bias_score = calculate_bias_score(messages)
+                tone_score = calculate_tone_score(messages)
+            except Exception as e:
+                logger.error(f"Error calculating bias/tone scores: {e}")
+        
         simulation_run = SimulationRun(
             id=str(uuid.uuid4()),
             task_id=self.task.id,
@@ -278,6 +290,8 @@ class Orchestrator:
             agent_cost=agent_cost,
             messages=messages,
             seed=self.seed,
+            bias_score=bias_score,
+            tone_score=tone_score,
         )
         return simulation_run
 

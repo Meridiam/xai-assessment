@@ -339,6 +339,12 @@ class SimulationRun(BaseModel):
     seed: Optional[int] = Field(
         description="Seed used for the simulation.", default=None
     )
+    bias_score: Optional[float] = Field(
+        description="The bias score for this simulation.", default=None
+    )
+    tone_score: Optional[float] = Field(
+        description="The tone score for this simulation.", default=None
+    )
 
 
 class Results(BaseModel):
@@ -419,6 +425,8 @@ class Results(BaseModel):
                 "termination_reason": sim.termination_reason,
                 "duration": sim.duration,
                 "num_messages": len(sim.messages),
+                "bias_score": sim.bias_score,
+                "tone_score": sim.tone_score,
                 "info_git_commit": self.info.git_commit,
                 "info_seed": self.info.seed,
                 "info_num_trials": self.info.num_trials,

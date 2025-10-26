@@ -199,6 +199,12 @@ class ConsoleDisplay:
         if simulation.user_cost is not None:
             sim_info.append("User Cost: ", style="bold cyan")
             sim_info.append(f"${simulation.user_cost:.4f}\n")
+        if simulation.bias_score is not None:
+            sim_info.append("Bias Score: ", style="bold cyan")
+            sim_info.append(f"{simulation.bias_score:.3f}\n")
+        if simulation.tone_score is not None:
+            sim_info.append("Tone Score: ", style="bold cyan")
+            sim_info.append(f"{simulation.tone_score:.3f}\n")
         if simulation.reward_info:
             marker = "✅" if is_successful(simulation.reward_info.reward) else "❌"
             sim_info.append("Reward: ", style="bold cyan")
@@ -350,6 +356,16 @@ class ConsoleDisplay:
         content.append("\n\n💰 Average Cost per Conversation: ", style="bold cyan")
         content.append(f"${metrics.avg_agent_cost:.4f}\n\n")
 
+        # Add bias score section
+        if metrics.avg_bias_score is not None:
+            content.append("⚖️ Average Bias Score: ", style="bold cyan")
+            content.append(f"{metrics.avg_bias_score:.3f}\n\n")
+
+        # Add tone score section
+        if metrics.avg_tone_score is not None:
+            content.append("🎭 Average Tone Score: ", style="bold cyan")
+            content.append(f"{metrics.avg_tone_score:.3f}\n\n")
+
         # Create and display panel
         metrics_panel = Panel(
             content,
@@ -387,6 +403,10 @@ class MarkdownDisplay:
             output.append(f"**Agent Cost**: ${sim.agent_cost:.4f}")
         if sim.user_cost is not None:
             output.append(f"**User Cost**: ${sim.user_cost:.4f}")
+        if sim.bias_score is not None:
+            output.append(f"**Bias Score**: {sim.bias_score:.3f}")
+        if sim.tone_score is not None:
+            output.append(f"**Tone Score**: {sim.tone_score:.3f}")
 
         # Add reward info if present
         if sim.reward_info:
