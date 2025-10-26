@@ -327,7 +327,10 @@ class SimulationRun(BaseModel):
         description="The cost of the agent.", default=None
     )
     user_cost: Optional[float] = Field(
-        description="The cost of the user.", default=None
+        description="The cost of the user (includes judge cost if applicable).", default=None
+    )
+    judge_cost: Optional[float] = Field(
+        description="The cost of the judge (for user output grounding).", default=None
     )
     reward_info: Optional[RewardInfo] = Field(
         description="The reward received by the agent.", default=None
@@ -422,6 +425,7 @@ class Results(BaseModel):
                 "reward": sim.reward_info.reward,
                 "agent_cost": sim.agent_cost,
                 "user_cost": sim.user_cost,
+                "judge_cost": sim.judge_cost,
                 "termination_reason": sim.termination_reason,
                 "duration": sim.duration,
                 "num_messages": len(sim.messages),

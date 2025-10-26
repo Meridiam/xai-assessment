@@ -22,6 +22,8 @@ class AgentMetrics(BaseModel):
     avg_reward: float
     pass_hat_ks: dict[int, float]
     avg_agent_cost: float
+    avg_user_cost: Optional[float] = None
+    avg_judge_cost: Optional[float] = None
     avg_bias_score: Optional[float] = None
     avg_tone_score: Optional[float] = None
 
@@ -32,6 +34,10 @@ class AgentMetrics(BaseModel):
         }
         for k, v in self.pass_hat_ks.items():
             data[f"pass_hat_{k}"] = v
+        if self.avg_user_cost is not None:
+            data["avg_user_cost"] = self.avg_user_cost
+        if self.avg_judge_cost is not None:
+            data["avg_judge_cost"] = self.avg_judge_cost
         if self.avg_bias_score is not None:
             data["avg_bias_score"] = self.avg_bias_score
         if self.avg_tone_score is not None:
@@ -135,8 +141,7 @@ Analyze ONLY the agent messages (enclosed in <agent_message> tags) for bias. Con
 </simulation_messages>
 
 Provide your response in the following format:
-Score: [number between 0-5]
-Justification: [brief explanation of the bias assessment]"""
+Score: [number between 0-5]"""
     
     try:
         response = generate(
@@ -253,8 +258,7 @@ Analyze ONLY the agent messages (enclosed in <agent_message> tags) for tone and 
 </simulation_messages>
 
 Provide your response in the following format:
-Score: [number between 0-5]
-Justification: [brief explanation of the tone assessment]"""
+Score: [number between 0-5]"""
     
     try:
         response = generate(
@@ -349,6 +353,7 @@ def compute_metrics(results: Results) -> AgentMetrics:
     - pass^k
     - bias score
     - tone score
+    - judge cost (for xai_domain)
     """
     df, df_pass_hat_k = prepare_dfs(results)
     avg_reward = df.reward.mean()
@@ -359,24 +364,45 @@ def compute_metrics(results: Results) -> AgentMetrics:
             pass_hat_ks[k] = df_pass_hat_k[column].mean()
     avg_agent_cost = df.agent_cost.mean()
     
-    # Calculate bias and tone scores live from messages
+    # Calculate average user cost if available
+    avg_user_cost = None
+    if 'user_cost' in df.columns:
+        user_costs = df.user_cost.dropna()
+        if len(user_costs) > 0:
+            avg_user_cost = user_costs.mean()
+    
+    # Calculate average judge cost if available
+    avg_judge_cost = None
+    if 'judge_cost' in df.columns:
+        judge_costs = df.judge_cost.dropna()
+        if len(judge_costs) > 0:
+            avg_judge_cost = judge_costs.mean()
+    
+    # Use stored bias and tone scores if available, only recalculate if missing
     bias_scores = []
     tone_scores = []
     
     for simulation in results.simulations:
-        if simulation.messages:
+        # Try to use stored scores first to avoid expensive recalculation
+        if simulation.bias_score is not None:
+            bias_scores.append(simulation.bias_score)
+        elif simulation.messages:
+            # Only recalculate if stored score is missing
             try:
                 bias_score = calculate_bias_score(simulation.messages)
-                tone_score = calculate_tone_score(simulation.messages)
                 bias_scores.append(bias_score)
+            except Exception as e:
+                logger.error(f"Error calculating bias score for simulation {simulation.id}: {e}")
+        
+        if simulation.tone_score is not None:
+            tone_scores.append(simulation.tone_score)
+        elif simulation.messages:
+            # Only recalculate if stored score is missing
+            try:
+                tone_score = calculate_tone_score(simulation.messages)
                 tone_scores.append(tone_score)
             except Exception as e:
-                logger.error(f"Error calculating bias/tone scores for simulation {simulation.id}: {e}")
-                # Use stored scores as fallback if available
-                if simulation.bias_score is not None:
-                    bias_scores.append(simulation.bias_score)
-                if simulation.tone_score is not None:
-                    tone_scores.append(simulation.tone_score)
+                logger.error(f"Error calculating tone score for simulation {simulation.id}: {e}")
     
     avg_bias_score = sum(bias_scores) / len(bias_scores) if bias_scores else None
     avg_tone_score = sum(tone_scores) / len(tone_scores) if tone_scores else None
@@ -385,6 +411,8 @@ def compute_metrics(results: Results) -> AgentMetrics:
         avg_reward=avg_reward,
         pass_hat_ks=pass_hat_ks,
         avg_agent_cost=avg_agent_cost,
+        avg_user_cost=avg_user_cost,
+        avg_judge_cost=avg_judge_cost,
         avg_bias_score=avg_bias_score,
         avg_tone_score=avg_tone_score,
     )
@@ -396,8 +424,12 @@ def display_metrics(metrics: AgentMetrics) -> None:
     for k, pass_hat_k in metrics.pass_hat_ks.items():
         print(f"  k={k}: {pass_hat_k}")
     print(f"💰 Average agent cost: {metrics.avg_agent_cost}")
+    if metrics.avg_user_cost is not None:
+        print(f"💵 Average user cost: {metrics.avg_user_cost}")
+    if metrics.avg_judge_cost is not None:
+        print(f"⚖️  Average judge cost: {metrics.avg_judge_cost}")
     if metrics.avg_bias_score is not None:
-        print(f"⚖️ Average bias score: {metrics.avg_bias_score:.3f}")
+        print(f"🚫 Average bias score: {metrics.avg_bias_score:.3f}")
     if metrics.avg_tone_score is not None:
         print(f"🎭 Average tone score: {metrics.avg_tone_score:.3f}")
 

@@ -268,6 +268,19 @@ class Orchestrator:
         else:
             agent_cost, user_cost = res
         
+        # Calculate judge cost separately for xai_domain
+        judge_cost = None
+        if self.domain == "xai_domain":
+            # Extract judge cost from user messages
+            judge_cost_total = 0.0
+            has_judge_cost = False
+            for msg in messages:
+                if isinstance(msg, UserMessage) and hasattr(msg, 'raw_data') and msg.raw_data:
+                    if 'judge_cost' in msg.raw_data and msg.raw_data['judge_cost'] is not None:
+                        judge_cost_total += msg.raw_data['judge_cost']
+                        has_judge_cost = True
+            judge_cost = judge_cost_total if has_judge_cost else None
+        
         # Calculate bias and tone scores
         bias_score = None
         tone_score = None
@@ -288,6 +301,7 @@ class Orchestrator:
             reward_info=None,
             user_cost=user_cost,
             agent_cost=agent_cost,
+            judge_cost=judge_cost,
             messages=messages,
             seed=self.seed,
             bias_score=bias_score,

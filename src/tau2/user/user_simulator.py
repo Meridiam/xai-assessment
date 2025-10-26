@@ -22,6 +22,7 @@ from tau2.user.base import (
 )
 from tau2.utils import DATA_DIR
 from tau2.utils.llm_utils import generate
+from tau2.user.judge import judge_user_response, format_conversation_history
 
 GLOBAL_USER_SIM_GUIDELINES_DIR = DATA_DIR / "tau2" / "user_simulator"
 
@@ -72,9 +73,13 @@ class UserSimulator(BaseUser):
         instructions: Optional[UserInstructions] = None,
         llm: Optional[str] = None,
         llm_args: Optional[dict] = None,
+        domain: Optional[str] = None,
+        enable_judge: bool = False,
     ):
         super().__init__(instructions=instructions, llm=llm, llm_args=llm_args)
         self.tools = tools
+        self.domain = domain
+        self.enable_judge = enable_judge
 
     @property
     def global_simulation_guidelines(self) -> str:
@@ -165,12 +170,48 @@ class UserSimulator(BaseUser):
         user_response = assistant_message.content
         logger.debug(f"Response: {user_response}")
 
+        # Track cost and usage (NOT including judge - that's tracked separately)
+        base_cost = assistant_message.cost
+        base_usage = assistant_message.usage
+        judge_cost = None
+        judge_usage = None
+        
+        # Apply judge if enabled and this is a text response (not a tool call)
+        if self.enable_judge and user_response and assistant_message.tool_calls is None:
+            logger.debug(f"Applying LLM judge for domain: {self.domain}")
+            
+            # Format conversation history for judge
+            conversation_history = format_conversation_history(state.messages)
+            
+            # Apply judge
+            corrected_response, judge_cost, judge_usage = judge_user_response(
+                user_response=user_response,
+                simulation_guidelines=self.global_simulation_guidelines,
+                user_scenario=str(self.instructions) if self.instructions else "",
+                conversation_history=conversation_history,
+                llm=self.llm,
+                llm_args=self.llm_args,
+            )
+            
+            # Use corrected response
+            user_response = corrected_response
+            
+            # Note: We do NOT add judge cost to base_cost
+            # Judge cost is tracked separately in raw_data and aggregated by orchestrator
+
+        # Store judge cost/usage in raw_data for separate tracking
+        raw_data = assistant_message.raw_data if assistant_message.raw_data else {}
+        if judge_cost is not None or judge_usage is not None:
+            raw_data = dict(raw_data) if raw_data else {}
+            raw_data['judge_cost'] = judge_cost
+            raw_data['judge_usage'] = judge_usage
+
         user_message = UserMessage(
             role="user",
             content=user_response,
-            cost=assistant_message.cost,
-            usage=assistant_message.usage,
-            raw_data=assistant_message.raw_data,
+            cost=base_cost,  # Only the user simulator cost, NOT including judge
+            usage=base_usage,  # Only the user simulator usage, NOT including judge
+            raw_data=raw_data,
         )
 
         # flip the requestor of the tool calls

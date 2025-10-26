@@ -199,6 +199,9 @@ class ConsoleDisplay:
         if simulation.user_cost is not None:
             sim_info.append("User Cost: ", style="bold cyan")
             sim_info.append(f"${simulation.user_cost:.4f}\n")
+        if simulation.judge_cost is not None:
+            sim_info.append("Judge Cost: ", style="bold cyan")
+            sim_info.append(f"${simulation.judge_cost:.4f}\n")
         if simulation.bias_score is not None:
             sim_info.append("Bias Score: ", style="bold cyan")
             sim_info.append(f"{simulation.bias_score:.3f}\n")
@@ -352,13 +355,23 @@ class ConsoleDisplay:
             content.append(f"\nk={k}: ", style="bold white")
             content.append(f"{pass_hat_k:.3f}")
 
-        # Add average agent cost section
-        content.append("\n\n💰 Average Cost per Conversation: ", style="bold cyan")
-        content.append(f"${metrics.avg_agent_cost:.4f}\n\n")
+        # Add cost sections
+        content.append("\n\n💰 Average Agent Cost: ", style="bold cyan")
+        content.append(f"${metrics.avg_agent_cost:.4f}\n")
+        
+        if metrics.avg_user_cost is not None:
+            content.append("💵 Average User Cost: ", style="bold cyan")
+            content.append(f"${metrics.avg_user_cost:.4f}\n")
+        
+        if metrics.avg_judge_cost is not None:
+            content.append("⚖️  Average Judge Cost: ", style="bold cyan")
+            content.append(f"${metrics.avg_judge_cost:.4f}\n")
+        
+        content.append("\n")
 
         # Add bias score section
         if metrics.avg_bias_score is not None:
-            content.append("⚖️ Average Bias Score: ", style="bold cyan")
+            content.append("🚫 Average Bias Score: ", style="bold cyan")
             content.append(f"{metrics.avg_bias_score:.3f}\n\n")
 
         # Add tone score section
@@ -403,6 +416,8 @@ class MarkdownDisplay:
             output.append(f"**Agent Cost**: ${sim.agent_cost:.4f}")
         if sim.user_cost is not None:
             output.append(f"**User Cost**: ${sim.user_cost:.4f}")
+        if sim.judge_cost is not None:
+            output.append(f"**Judge Cost**: ${sim.judge_cost:.4f}")
         if sim.bias_score is not None:
             output.append(f"**Bias Score**: {sim.bias_score:.3f}")
         if sim.tone_score is not None:

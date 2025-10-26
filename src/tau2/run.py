@@ -22,7 +22,7 @@ from tau2.evaluator.evaluator import EvaluationType, evaluate_simulation
 from tau2.metrics.agent_metrics import compute_metrics
 from tau2.orchestrator.orchestrator import Orchestrator
 from tau2.registry import RegistryInfo, registry
-from tau2.user.user_simulator import DummyUser, get_global_user_sim_guidelines
+from tau2.user.user_simulator import DummyUser, UserSimulator, get_global_user_sim_guidelines
 from tau2.utils.display import ConsoleDisplay, Text
 from tau2.utils.pydantic_utils import get_pydantic_hash
 from tau2.utils.utils import DATA_DIR, get_commit_hash, get_now, show_dict_diff
@@ -466,12 +466,26 @@ def run_task(
             "Dummy user can only be used with solo agent"
         )
 
-    user = UserConstructor(
-        tools=user_tools,
-        instructions=str(task.user_scenario),
-        llm=llm_user,
-        llm_args=llm_args_user,
-    )
+    # Enable judge for xai_domain
+    enable_judge = (domain == "xai_domain")
+    
+    # Create user with appropriate parameters
+    if issubclass(UserConstructor, UserSimulator):
+        user = UserConstructor(
+            tools=user_tools,
+            instructions=str(task.user_scenario),
+            llm=llm_user,
+            llm_args=llm_args_user,
+            domain=domain,
+            enable_judge=enable_judge,
+        )
+    else:
+        user = UserConstructor(
+            tools=user_tools,
+            instructions=str(task.user_scenario),
+            llm=llm_user,
+            llm_args=llm_args_user,
+        )
 
     orchestrator = Orchestrator(
         domain=domain,
