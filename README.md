@@ -53,6 +53,9 @@ as follows:
 
 ### Run xAI benchmark
 
+If you have not yet done so, please follow the setup instructions above, and if necessary, ensure that you
+have activated your environment with `source .venv/bin/activate`.
+
 To run the prototype benchmark described in the project writeup:
 
 > [!NOTE]
