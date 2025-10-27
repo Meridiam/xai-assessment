@@ -55,6 +55,9 @@ as follows:
 
 To run the prototype benchmark described in the project writeup:
 
+> [!NOTE]
+> Upon benchmark completion, the results may take a moment to appear. This is WAI.
+
 ```tau2 run --domain xai_domain --agent-llm xai/grok-4-fast-non-reasoning --user-llm xai/grok-4-fast-non-reasoning --num-trials 4 --save-to my_model_xai```
 
 Results will be saved in `data/tau2/simulations/` under the name `my_model_xai`.
